@@ -69,14 +69,26 @@ function noteLayout(i){const minW=110,maxAuto=340;let width=i.w&&i.w>0?i.w:Math.
 function noteTextSvg(lines,x,y){return `<text font-size="12" fill="#29220f" class="noteText">${lines.map((line,j)=>`<tspan x="${x}" y="${y+j*17}">${esc(line)}</tspan>`).join('')}</text>`}
 // Serialize control frames as a balanced sequence: open at top, close at bottom.
 function groupBranches(i){if(i.group!=='alt')return [];const raw=Array.isArray(i.elseBranches)?i.elseBranches:(i.elseLabel?[{label:i.elseLabel,offset:i.elseOffset||75}]:[]);return raw.map((b,j)=>({id:j,label:String(b.label??''),offset:Math.max(30,Number(b.offset)||75)})).sort((a,b)=>a.offset-b.offset||a.id-b.id)}
+function mermaidOutputEvents(d){
+ const events=expanded(d).map((item,index)=>({item,index,codeY:item.y,order:index,after:0}));
+ const messages=events.filter(e=>e.item.type==='msg');
+ for(const event of events){
+  const comment=event.item;if(comment.type!=='comment')continue;
+  const left=comment.x??35,right=left+commentLayout(comment).width;
+  const actor=d.actors.find(a=>ax(d,a.id)>=left&&ax(d,a.id)<=right);if(!actor)continue;
+  const anchor=messages.findLast(e=>e.item.y<=comment.y&&(e.item.from===actor.id||e.item.to===actor.id));if(!anchor)continue;
+  event.codeY=anchor.item.y;event.order=anchor.index;event.after=1;
+ }
+ return events.sort((a,b)=>a.codeY-b.codeY||a.order-b.order||a.after-b.after||a.item.y-b.item.y||a.index-b.index);
+}
 function mermaidEvents(d){
- const lines=[],events=expanded(d).map((item,index)=>({item,index})).sort((a,b)=>a.item.y-b.item.y||a.index-b.index);
+ const lines=[],events=mermaidOutputEvents(d);
  const opened=[];
  const branches=f=>groupBranches(f.item);
  const emitDue=(f,y,force=false)=>{for(const br of branches(f)){if(!f.emitted.has(br.id)&&(force||y>=f.item.y+br.offset)){lines.push('    else '+String(br.label||' ').replace(/\r?\n/g,'<br/>'));f.emitted.add(br.id)}}};
- for(const {item:i} of events){
-  while(opened.length&&i.y>=opened[opened.length-1].bottom){emitDue(opened[opened.length-1],Infinity,true);lines.push('    end');opened.pop()}
-  for(const frame of opened)emitDue(frame,i.y);
+ for(const {item:i,codeY} of events){
+  while(opened.length&&codeY>=opened[opened.length-1].bottom){emitDue(opened[opened.length-1],Infinity,true);lines.push('    end');opened.pop()}
+  for(const frame of opened)emitDue(frame,codeY);
   const label=String(i.label||'').replace(/\r?\n/g,'<br/>');
   if(i.type==='group'){
    lines.push(`    ${i.group||'opt'} ${label}`);
