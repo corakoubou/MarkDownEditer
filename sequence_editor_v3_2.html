@@ -36,8 +36,19 @@ function extract(d,start){
  }
  // Copy control frames owned by this call, excluding enclosing or partially overlapping frames.
  let body=sort(d.items).filter(i=>i.id!==root.id&&(
-  i.type==='group'?functionOwnsGroup(d,root,last,i):i.y>root.y&&i.y<=last));
+  i.type==='group'?functionOwnsGroup(d,root,last,i):i.type==='comment'?functionOwnsComment(d,root,last,i):i.y>root.y&&i.y<=last));
  return {body,closed,root,source:d.id};
+}
+function commentAnchor(d,comment,messages){
+ const left=comment.x??35,right=left+commentLayout(comment).width;
+ const actor=d.actors.find(a=>ax(d,a.id)>=left&&ax(d,a.id)<=right);
+ return {actor,message:actor?messages.findLast(m=>m.y<=comment.y&&(m.from===actor.id||m.to===actor.id)):null};
+}
+function functionOwnsComment(d,root,last,comment){
+ if(comment.y<=root.y||comment.y>last)return false;
+ const {actor,message}=commentAnchor(d,comment,sort(d.items).filter(i=>i.type==='msg'));
+ // A comment belongs to its leftmost participant's preceding call, not every overlapping call.
+ return !actor||!!message&&message.y>=root.y&&message.y<=last;
 }
 function functionOwnsGroup(d,root,last,frame){
  const bottom=frame.y+(frame.h||110);if(bottom>last||frame.y>last)return false;
@@ -108,9 +119,8 @@ function mermaidOutputEvents(d){
  const messages=events.filter(e=>e.item.type==='msg'),layout={...d,actors:actorsForEvents(d,events.map(e=>e.item))};
  for(const event of events){
   const comment=event.item;if(comment.type!=='comment')continue;
-  const left=comment.x??35,right=left+commentLayout(comment).width;
-  const actor=layout.actors.find(a=>ax(layout,a.id)>=left&&ax(layout,a.id)<=right);if(!actor)continue;
-  const anchor=messages.findLast(e=>e.item.y<=comment.y&&(e.item.from===actor.id||e.item.to===actor.id));if(!anchor)continue;
+  const {message}=commentAnchor(layout,comment,messages.map(e=>e.item));if(!message)continue;
+  const anchor=messages.find(e=>e.item===message);
   event.codeY=anchor.item.y;event.order=anchor.index;event.after=1;
  }
  return events.sort((a,b)=>a.codeY-b.codeY||a.order-b.order||a.after-b.after||a.item.y-b.item.y||a.index-b.index);
