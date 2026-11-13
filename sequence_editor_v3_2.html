@@ -342,8 +342,8 @@ function renderTemplates(){
    const source=templateDiagram(templates[name]);
    if(!source){alert('テンプレートの形式が不正です');return}
    const current=diagram();if(!current)return;
-   if(!confirm('選択中の図「'+current.name+'」だけをテンプレート「'+name+'」で置き換えますか？\n他の図は変更しません。'))return;
-   backup();const copy=clone(source);copy.id=current.id;
+   if(!confirm('選択中の図「'+current.name+'」のシーケンス内容だけをテンプレート「'+name+'」で置き換えますか？\n他の図は変更しません。'))return;
+   backup();const copy={...current,actors:clone(source.actors),items:clone(source.items)};
    copy.items.forEach(item=>{item.id=uid()});
    diagrams[diagrams.findIndex(d=>d.id===current.id)]=copy;
    selected=null;all=false;render();props();save();
