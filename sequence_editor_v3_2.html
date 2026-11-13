@@ -4,6 +4,14 @@
 .elseDrag{cursor:ns-resize;touch-action:none}.elseDrag:hover .elseLine{stroke:#ffd36e;stroke-width:3}
 svg{box-sizing:content-box}#viewport{overflow-anchor:none}#canvases{user-select:none}
 .unusedActor{stroke:#ff6b6b!important;stroke-width:3!important}
+
+#drawMode{background:#203e59;border-color:#55b6ff;color:#e4f4ff;box-shadow:0 0 0 1px #55b6ff38,0 0 10px #279dff55}
+#drawMode:hover{background:#295576;box-shadow:0 0 0 1px #55b6ff66,0 0 14px #279dff88}
+#drawMode.on{background:#155b8d;border-color:#8cd6ff;box-shadow:0 0 0 1px #8cd6ff88,0 0 16px #279dffaa}
+#addComment{background:#24533c;border-color:#69c28b;color:#e1f7e9}#addComment:hover{background:#306d4d}
+#addGroup{background:#51416c;border-color:#a993d7;color:#f2eafd}#addGroup:hover{background:#685389}
+#addNote{background:#f2d375;border-color:#ffe5a0;color:#35290d}#addNote:hover{background:#ffe49b}
+#addActor{background:#235466;border-color:#68a2b7;color:#e0f4fa}#addActor:hover{background:#306a7e}
 </style></head><body>
 <header><span class="sectionHeading">全体操作</span><button id="addDiagram">＋図</button><button id="renameDiagram">図の名前変更</button><button id="deleteDiagram" style="border-color:#b36b6b">図を削除</button><button id="allDiagrams">全図表示</button><button id="saveMd">MD保存</button><button id="loadMd">MD読込</button><input id="file" type="file" accept=".md,.mmd,.txt" hidden></header>
 <div class="bar viewBar"><span class="sectionHeading">画面切替</span><button id="viewEditor" class="on">実エディター</button><button id="viewFunctions">関数一覧・関係図</button><span class="sectionHeading">表示倍率</span><button id="zoomOut" aria-label="縮小">−</button><output id="zoomLevel">100%</output><button id="zoomIn" aria-label="拡大">＋</button><button id="zoomReset">100%に戻す</button></div>
