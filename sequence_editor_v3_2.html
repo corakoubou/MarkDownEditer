@@ -116,7 +116,7 @@ function functionOwnsGroup(d,root,last,frame){
  const from=ax(d,root.from),to=ax(d,root.to);
  return root.y<=bottom&&(from<left||from>right)&&to>=left&&to<=right;
 }
-function functionKey(m){return m.functionId?'independent:'+m.functionId:JSON.stringify([m.from,m.label])}
+function functionKey(m){return m.functionId?'independent:'+m.functionId:JSON.stringify([m.from,m.to,m.label])}
 function isFunctionCall(d,m){return m.type==='msg'&&d.actors.findIndex(a=>a.id===m.from)<d.actors.findIndex(a=>a.id===m.to)}
 function buildRegistry(){registry={};for(let d of diagrams){let seq=sort(d.items).filter(i=>i.type==='msg');for(let i=0;i<seq.length;i++){let m=seq[i];if(!isFunctionCall(d,m))continue;let key=functionKey(m);const candidate=extract(d,i);const current=registry[key];if(!current||!!current.root.functionCopy&&!m.functionCopy||!!current.root.functionCopy===!!m.functionCopy&&!current.closed&&candidate.closed)registry[key]=candidate}}}
 function functionReference(d,m){if(!isFunctionCall(d,m))return null;const r=registry[functionKey(m)];return r&&(r.source!==d.id||r.root.id!==m.id)?r:null}
@@ -452,7 +452,7 @@ function props(){pendingPropertyEdits=false;let box=$('props');if(!selected){box
  const reference=functionReference(d,o);
  const panel=document.createElement('div');
  if(reference){panel.innerHTML='<div style="display:flex;gap:6px;align-items:center"><button type="button" id="materializeFunction">この関数を独立した実体にする</button><button type="button" id="jumpToFunctionSource">コピー元に飛ぶ</button></div><p class="hint">表示中の処理・ノート・制御枠をこの図に複製し、同じ関数名のまま個別に編集できます。</p>';panel.querySelector('#materializeFunction').onclick=()=>materializeFunction(d,o);panel.querySelector('#jumpToFunctionSource').onclick=()=>jumpToFunctionSource(d,o)}
- else if(o.functionId){panel.innerHTML='<p><strong>独立関数</strong></p><p class="hint">同名の関数とは別に管理されます。元に戻すと、同じ名前・始点参加者の関数があればそのコピーに、なければ他から呼べるコピー元になります。コピーへ戻す場合、この独立関数の処理はコピー元の内容に置き換わります。</p><button type="button" id="restoreSharedFunction">独立関数から元に戻す</button>';panel.querySelector('button').onclick=()=>restoreSharedFunction(d,o)}
+ else if(o.functionId){panel.innerHTML='<p><strong>独立関数</strong></p><p class="hint">同名の関数とは別に管理されます。元に戻すと、同じ名前・始点参加者・終点参加者の関数があればそのコピーに、なければ他から呼べるコピー元になります。コピーへ戻す場合、この独立関数の処理はコピー元の内容に置き換わります。</p><button type="button" id="restoreSharedFunction">独立関数から元に戻す</button>';panel.querySelector('button').onclick=()=>restoreSharedFunction(d,o)}
  box.prepend(panel);
  }if(selected.type==='actor'){
  const insertBar=document.createElement('div');insertBar.className='fieldrow';insertBar.innerHTML='<button type="button" id="insertBeforeActor">＋ この参加者の前に追加</button><button type="button" id="insertAfterActor">＋ この参加者の後に追加</button>';box.prepend(insertBar);
