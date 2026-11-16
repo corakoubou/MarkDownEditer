@@ -13,20 +13,31 @@ svg{box-sizing:content-box}#viewport{overflow-anchor:none}#canvases{user-select:
 #addNote{background:#f2d375;border-color:#ffe5a0;color:#35290d}#addNote:hover{background:#ffe49b}
 #addActor{background:#235466;border-color:#68a2b7;color:#e0f4fa}#addActor:hover{background:#306a7e}
 #leftPadding{width:90px}.viewBar label{display:inline-block;margin:0 0 0 10px}
+body.shortcutMode #editorMain,body.shortcutMode .editorBar{display:none!important}
+#shortcutView{padding:16px;max-width:850px}#shortcutRows{display:grid;gap:8px;margin:16px 0}.shortcutRow{display:grid;grid-template-columns:minmax(180px,1fr) 100px minmax(100px,160px) auto;gap:10px;align-items:center;padding:10px;background:#2d3340;border:1px solid #495163;border-radius:7px}.shortcutRow label{font-size:14px;margin:0}.shortcutRow input{width:100%}#shortcutMessage{min-height:24px;color:#ffcf70}@media(max-width:600px){.shortcutRow{grid-template-columns:1fr 90px}.shortcutRow input{grid-column:1}}
 </style></head><body>
 <header><span class="sectionHeading">全体操作</span><button id="addDiagram">＋図</button><button id="renameDiagram">図の名前変更</button><button id="deleteDiagram" style="border-color:#b36b6b">図を削除</button><button id="allDiagrams">全図表示</button><button id="saveMd">MD保存</button><button id="loadMd">MD読込</button><input id="file" type="file" accept=".md,.mmd,.txt" hidden></header>
-<div class="bar viewBar"><span class="sectionHeading">画面切替</span><button id="viewEditor" class="on">実エディター</button><button id="viewFunctions">関数一覧・関係図</button><span class="sectionHeading">表示倍率</span><button id="zoomOut" aria-label="縮小">−</button><output id="zoomLevel">100%</output><button id="zoomIn" aria-label="拡大">＋</button><button id="zoomReset">100%に戻す</button><label for="leftPadding">左余白（px）</label><input id="leftPadding" type="number" min="0" max="2000" step="10" value="120" title="図の左側に追加する余白（0〜2000px）"></div>
+<div class="bar viewBar"><span class="sectionHeading">画面切替</span><button id="viewEditor" class="on">実エディター</button><button id="viewFunctions">関数一覧・関係図</button><button id="viewShortcuts">ショートカット設定</button><span class="sectionHeading">表示倍率</span><button id="zoomOut" aria-label="縮小">−</button><input id="zoomLevel" type="text" inputmode="numeric" pattern="[0-9]*" value="100" aria-label="表示倍率（％）" title="表示倍率（1〜300％、1％刻み）" style="width:64px;text-align:right"><span>%</span><button id="zoomIn" aria-label="拡大">＋</button><button id="zoomReset">100%に戻す</button><label for="leftPadding">左余白（px）</label><input id="leftPadding" type="number" min="0" max="2000" step="10" value="120" title="図の左側に追加する余白（0〜2000px）"></div>
 <div class="bar editorBar"><span class="sectionHeading">図の選択</span><div id="tabs" class="tabs"></div></div>
 <div class="bar editorBar"><span class="sectionHeading">図の編集・操作</span><button id="selectMode" class="on">選択・移動</button><button id="batchMode">一括移動</button><button id="drawMode">線を引く</button><button id="addActor">＋参加者</button><button id="manageActors">参加者管理（一括編集）</button><button id="addNote">＋ノート</button><button id="addComment">＋コメント</button><button id="addGroup">＋制御枠</button><button id="undo">戻す</button><button id="remove">削除</button><span class="hint" id="status">ノート・制御枠は右下の黄色い点でサイズ変更できます。</span></div>
 <main id="editorMain"><div id="viewport"><div id="canvases"></div></div><div id="panelSplitter" role="separator" aria-orientation="vertical" title="左右にドラッグして編集欄の幅を変更"></div><aside><h3>図・要素の編集</h3><label for="diagramMemo">図のメモ（選択中の図）</label><textarea id="diagramMemo" placeholder="この図の仕様・注意事項など" style="height:110px"></textarea><p class="hint">図ごとに保存されます。Mermaid上には表示されません。JSON保存には含めません。</p><div id="props" class="hint">要素をクリックしてください。</div><p class="hint">矢印を選択すると「＋ 活性化」「－ 終了」を設定できます。縦線上に実行中の太い帯を表示し、Mermaidにも + / - を出力します。</p><h3>線の既定値</h3><div class="fieldrow"><div><label>右向き →</label><select id="rightStyle"></select></div><div><label>左向き ←</label><select id="leftStyle"></select></div></div><p class="hint">方向ごとの既定線種はブラウザに保存されます。</p><h3>テンプレート（選択中の図のみ）</h3><p class="hint">登録・適用ともに選択中の1図だけが対象です。既存の全図テンプレートは先頭の図を読み込みます。</p><div class="fieldrow"><input id="templateName" placeholder="テンプレート名"><button id="saveTemplate">登録</button></div><div id="templates"></div><div class="fieldrow"><button id="exportJson">JSON保存</button><button id="importJson">JSON読込</button><input id="jsonFile" type="file" accept=".json" hidden></div><h3>Markdown / Mermaid</h3><div class="codePanel"><h4>選択中の図 — 編集・反映</h4><div class="hint" id="currentCodeTitle"></div><textarea id="code" spellcheck="false"></textarea><div class="fieldrow"><button id="apply">この図にコードを反映</button><button id="copy">この図をコピー</button></div><p class="hint">選択中の図だけを置換します。## / ### などの見出しがあれば図の名前も更新します。他の図は変更しません。</p></div><div class="codePanel"><h4>すべての図 — 出力専用</h4><textarea id="allCode" readonly spellcheck="false"></textarea><div class="fieldrow"><button id="copyAll">全図をコピー</button></div><p class="hint">全図のMarkdownをまとめて確認できます。この欄から図への反映は行いません。</p></div></aside></main><section id="functionView" hidden><div class="functionToolbar"><h3>関数の自動登録一覧</h3><span class="hint">関数を選ぶと、呼び出し先と戻りまでの処理をシーケンス図で表示します。</span></div><div class="functionFilter"><label for="functionActorFilter">参加者で絞り込み（表示名）</label><select id="functionActorFilter"><option value="">すべての参加者</option></select><span id="functionCount" class="hint"></span></div><div id="functionList"></div><div id="functionDetail"></div></section>
-<div id="actorManageOverlay" style="display:none;position:fixed;inset:0;background:#000b;z-index:10000;align-items:center;justify-content:center;padding:16px"><div style="background:#2d3340;border:1px solid #65748a;border-radius:10px;padding:18px;width:min(900px,98vw);max-height:90vh;overflow:auto"><h3>参加者管理 — 全図共通の一括編集</h3><p class="hint">同じ物理名と表示名の組み合わせをまとめて表示します。変更は「全図に反映」を押したときに一括適用されます。図ごとの個別編集も引き続き使用できます。</p><div id="actorManageRows"></div><div class="fieldrow" style="margin-top:14px"><button id="actorManageCancel">キャンセル</button><button id="actorManageApply">全図に反映</button></div></div></div><div id="mergeOverlay"><div id="mergePanel" role="dialog" aria-modal="true" aria-labelledby="mergeTitle"><h3 id="mergeTitle">参加者の照合確認</h3><p class="hint">Markdownの参加者に対し、既存の参加者を採用するか、新規作成するかを選んでください。確定するまで図は変更されません。</p><div id="mergeRows"></div><div class="mergeActions"><button id="mergeCancel">キャンセル</button><button id="mergeCommit">確定して反映</button></div></div></div><script>
+<div id="actorManageOverlay" role="dialog" aria-modal="true" aria-labelledby="actorManageTitle" style="display:none;position:fixed;inset:0;background:#000b;z-index:10000;align-items:center;justify-content:center;padding:16px"><div style="background:#2d3340;border:1px solid #65748a;border-radius:10px;padding:18px;width:min(900px,98vw);max-height:90vh;overflow:auto"><h3 id="actorManageTitle">参加者管理 — 全図共通の一括編集</h3><p class="hint">同じ物理名と表示名の組み合わせをまとめて表示します。変更は「全図に反映」を押したときに一括適用されます。図ごとの個別編集も引き続き使用できます。</p><div id="actorManageRows"></div><div class="fieldrow" style="margin-top:14px"><button id="actorManageCancel">キャンセル</button><button id="actorManageApply">全図に反映</button></div></div></div><div id="mergeOverlay"><div id="mergePanel" role="dialog" aria-modal="true" aria-labelledby="mergeTitle"><h3 id="mergeTitle">参加者の照合確認</h3><p class="hint">Markdownの参加者に対し、既存の参加者を採用するか、新規作成するかを選んでください。確定するまで図は変更されません。</p><div id="mergeRows"></div><div class="mergeActions"><button id="mergeCancel">キャンセル</button><button id="mergeCommit">確定して反映</button></div></div></div><section id="shortcutView" hidden><h3>図の編集・操作 — ショートカット設定</h3><p class="hint">Ctrl・Shift・Altのいずれかを選び、キー欄をクリックして使いたいキーを押してください。空欄は未設定です。<br>実エディターでのみ有効です。文字入力中・ダイアログ表示中には実行しません。ブラウザーやOSが優先する組み合わせは使用できない場合があります。</p><div id="shortcutRows"></div><button id="saveShortcuts">設定を保存</button><p id="shortcutMessage" role="status" aria-live="polite"></p></section><script>
 'use strict';const $=id=>document.getElementById(id),STYLES=['->>','-->>','->','-->','-x','--x'],KEY='seq-visual-v3';let settings={right:'->>',left:'-->>',leftPadding:120},templates={},diagrams=[{id:'d1',name:'メイン',actors:[{id:'A',name:'A'},{id:'B',name:'B'},{id:'C',name:'C'},{id:'D',name:'D'}],items:[{id:'m1',type:'msg',from:'B',to:'C',label:'名称登録',style:'->>',activate:true,y:140},{id:'m2',type:'msg',from:'C',to:'D',label:'検索',style:'->>',y:220},{id:'m3',type:'msg',from:'D',to:'C',label:'検索結果',style:'-->>',y:300},{id:'m4',type:'msg',from:'C',to:'B',label:'登録結果',style:'-->>',deactivate:true,y:380}]}],active='d1',all=false,mode='select',selected=null,gesture=null,history=[],counter=0,registry={},currentFunctionKey=null,currentFunctionActor="";const uid=()=> 'i'+Date.now().toString(36)+(++counter),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),diagram=()=>diagrams.find(d=>d.id===active),sort=arr=>arr.slice().sort((a,b)=>a.y-b.y),ax=(d,id)=>{let x=100;for(const a of d.actors){if(a.id===id)return x;x+=Math.max(165,Math.min(800,Number(a.gapAfter)||205))}return -1},snap=n=>Math.max(95,Math.round(n/10)*10),clone=x=>JSON.parse(JSON.stringify(x));
 function canvasLeftPadding(){const value=Number(settings.leftPadding);return Number.isFinite(value)?Math.max(0,Math.min(2000,Math.round(value))):120}
 $('leftPadding').onchange=()=>{cancelGesture();const value=$('leftPadding').valueAsNumber;settings.leftPadding=Number.isFinite(value)?Math.max(0,Math.min(2000,Math.round(value))):120;render();props();if(document.body.classList.contains('functionMode'))renderFunctionView();save()};
 let zoom=1;
-function applyZoom(){document.querySelectorAll('#canvases svg,.functionCanvas').forEach(svg=>{const b=svg.viewBox.baseVal;svg.setAttribute('width',b.width*zoom);svg.setAttribute('height',b.height*zoom)});$('zoomLevel').textContent=Math.round(zoom*100)+'%';$('zoomOut').disabled=zoom<=0.25;$('zoomIn').disabled=zoom>=3}
-function setZoom(value){zoom=Math.max(0.25,Math.min(3,Math.round(value*100)/100));applyZoom()}
-$('zoomOut').onclick=()=>setZoom(zoom-0.25);$('zoomIn').onclick=()=>setZoom(zoom+0.25);$('zoomReset').onclick=()=>setZoom(1);
+function applyZoom(){document.querySelectorAll('#canvases svg,.functionCanvas').forEach(svg=>{const b=svg.viewBox.baseVal;svg.setAttribute('width',b.width*zoom);svg.setAttribute('height',b.height*zoom)});$('zoomLevel').value=String(Math.round(zoom*100));$('zoomOut').disabled=zoom<=0.25;$('zoomIn').disabled=zoom>=3}
+function setZoom(value){zoom=Math.max(0.01,Math.min(3,Math.round(value*100)/100));applyZoom()}
+// Arrow buttons keep the existing 25% stops; typed percentages may lie between them.
+$('zoomOut').onclick=()=>{if(zoom>0.25)setZoom((Math.ceil(Math.round(zoom*100)/25)-1)*0.25)};
+$('zoomIn').onclick=()=>setZoom((Math.floor(Math.round(zoom*100)/25)+1)*0.25);
+$('zoomReset').onclick=()=>setZoom(1);
+let zoomDraft='100';
+$('zoomLevel').oninput=()=>{const input=$('zoomLevel');if(/^[0-9]*$/.test(input.value))zoomDraft=input.value;else input.value=zoomDraft};
+$('zoomLevel').onfocus=()=>{zoomDraft=$('zoomLevel').value};
+$('zoomLevel').onchange=()=>{const value=$('zoomLevel').value;setZoom(value===''?zoom:Number(value)/100)};
+$('zoomLevel').onblur=()=>applyZoom();
+$('zoomLevel').onkeydown=event=>{if(event.key==='Enter'){event.preventDefault();$('zoomLevel').blur()}else if(event.key==='Escape'){applyZoom();$('zoomLevel').blur()}};
 const commentTextContext=document.createElement('canvas').getContext('2d');
 const commentGraphemes=new Intl.Segmenter('ja',{granularity:'grapheme'});
 function commentLayout(i){
@@ -428,8 +439,54 @@ function renderFunctionView(){
  const finish=()=>{if(!dragging)return;dragging=false;splitter.classList.remove('dragging');const width=Math.round(document.querySelector('#editorMain aside').getBoundingClientRect().width);localStorage.setItem('seq-editor-aside-width',String(width))};
  splitter.addEventListener('pointerup',finish);splitter.addEventListener('pointercancel',finish);
 })();
-$('viewEditor').onclick=()=>{document.body.classList.remove('functionMode');$('viewEditor').classList.add('on');$('viewFunctions').classList.remove('on')};
-$('viewFunctions').onclick=()=>{document.body.classList.add('functionMode');$('viewEditor').classList.remove('on');$('viewFunctions').classList.add('on');renderFunctionView()};
+function switchView(view){
+ cancelGesture();
+ document.body.classList.toggle('functionMode',view==='functions');
+ document.body.classList.toggle('shortcutMode',view==='shortcuts');
+ $('functionView').hidden=view!=='functions';$('shortcutView').hidden=view!=='shortcuts';
+ for(const [id,name] of [['viewEditor','editor'],['viewFunctions','functions'],['viewShortcuts','shortcuts']])$(id).classList.toggle('on',view===name);
+ if(view==='functions')renderFunctionView();
+ if(view==='shortcuts')renderShortcutSettings();
+}
+$('viewEditor').onclick=()=>switchView('editor');
+$('viewFunctions').onclick=()=>switchView('functions');
+$('viewShortcuts').onclick=()=>switchView('shortcuts');
+const shortcutActions=[...document.querySelectorAll('.editorBar button[id]')].map(button=>({id:button.id,label:button.textContent}));
+const SHORTCUT_KEY='seq-editor-shortcuts-v1',shortcutModifiers=['Ctrl','Shift','Alt'];
+const normalizeShortcutKey=key=>key===' '?'Space':key.length===1?key.toLowerCase():key;
+function validShortcutKey(key){return typeof key==='string'&&(Array.from(key).length===1&&!/\s/.test(key)||/^(Space|Enter|Tab|Escape|Backspace|Delete|Insert|Home|End|PageUp|PageDown|ArrowUp|ArrowDown|ArrowLeft|ArrowRight|F(?:[1-9]|1[0-9]|2[0-4]))$/.test(key))}
+let shortcuts={};
+try{const stored=JSON.parse(localStorage.getItem(SHORTCUT_KEY)),used=new Set();for(const {id} of shortcutActions){const binding=stored?.[id];if(!binding||!shortcutModifiers.includes(binding.modifier)||!validShortcutKey(binding.key))continue;const key=normalizeShortcutKey(binding.key),signature=binding.modifier+'+'+key;if(!used.has(signature)){shortcuts[id]={modifier:binding.modifier,key};used.add(signature)}}}catch{}
+function shortcutLabel(binding){return binding.modifier+' + '+(binding.key.length===1?binding.key.toUpperCase():binding.key)}
+function updateShortcutHints(){for(const {id} of shortcutActions){const binding=shortcuts[id];if(binding){$(id).title=shortcutLabel(binding);$(id).setAttribute('aria-keyshortcuts',binding.modifier.replace('Ctrl','Control')+'+'+binding.key)}else{$(id).removeAttribute('title');$(id).removeAttribute('aria-keyshortcuts')}}}
+function renderShortcutSettings(){
+ $('shortcutMessage').textContent='';$('shortcutRows').replaceChildren();
+ for(const {id,label} of shortcutActions){
+  const row=document.createElement('div');row.className='shortcutRow';row.dataset.action=id;
+  row.innerHTML=`<label for="shortcut-key-${id}">${esc(label)}</label><select aria-label="${esc(label)}の修飾キー">${shortcutModifiers.map(m=>`<option>${m}</option>`).join('')}</select><input id="shortcut-key-${id}" aria-label="${esc(label)}のキー" readonly placeholder="キーを押す"><button type="button">解除</button>`;
+  const select=row.querySelector('select'),input=row.querySelector('input');select.value=shortcuts[id]?.modifier||'Ctrl';input.value=shortcuts[id]?.key||'';
+  input.onkeydown=e=>{e.stopPropagation();if(e.key==='Tab')return;e.preventDefault();if(e.isComposing||e.keyCode===229)return;const key=normalizeShortcutKey(e.key);if(validShortcutKey(key))input.value=key};
+  row.querySelector('button').onclick=()=>{input.value=''};$('shortcutRows').append(row);
+ }
+}
+$('saveShortcuts').onclick=()=>{
+ const next={},used=new Map();
+ for(const row of $('shortcutRows').children){const key=row.querySelector('input').value;if(!key)continue;const modifier=row.querySelector('select').value,signature=modifier+'+'+key;
+  if(used.has(signature)){$('shortcutMessage').textContent=shortcutLabel({modifier,key})+' が「'+used.get(signature)+'」と重複しています。別のキーを設定してください。';return}
+  used.set(signature,shortcutActions.find(a=>a.id===row.dataset.action).label);next[row.dataset.action]={modifier,key};
+ }
+ try{localStorage.setItem(SHORTCUT_KEY,JSON.stringify(next));shortcuts=next;updateShortcutHints();$('shortcutMessage').textContent='設定を保存しました。'}catch{$('shortcutMessage').textContent='設定を保存できませんでした。ブラウザーの保存設定を確認してください。'}
+};
+document.addEventListener('keydown',e=>{
+ if(e.defaultPrevented||e.isComposing||e.keyCode===229||e.metaKey||document.body.classList.contains('functionMode')||document.body.classList.contains('shortcutMode')||gesture)return;
+ if(e.target.closest('input,textarea,select,[contenteditable]:not([contenteditable="false"])'))return;
+ if([...document.querySelectorAll('[role="dialog"]')].some(el=>el.getClientRects().length))return;
+ const modifiers=[e.ctrlKey,e.shiftKey,e.altKey];if(modifiers.filter(Boolean).length!==1)return;
+ const modifier=shortcutModifiers[modifiers.indexOf(true)],key=normalizeShortcutKey(e.key);
+ const action=shortcutActions.find(({id})=>shortcuts[id]?.modifier===modifier&&shortcuts[id]?.key===key);
+ if(!action||$(action.id).disabled)return;e.preventDefault();if(!e.repeat)$(action.id).click();
+});
+updateShortcutHints();
 function download(name,text,type){let u=URL.createObjectURL(new Blob([text],{type})),a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}function setMode(m){cancelGesture();lastCanvasClick=null;mode=m;render()}
 
 function openActorManager(){
