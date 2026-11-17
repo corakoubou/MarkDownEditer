@@ -761,7 +761,7 @@ document.addEventListener('keydown',e=>{
 });
 function beginCreatedTextEdit(){
  const input=$('props').querySelector('[data-key="label"]');if(!input)return;
- input.title='Enterを2回押すと確定します。'+(input.tagName==='TEXTAREA'?'Shift＋Enterで改行できます。':'');
+ input.title='Enterを2回押すと確定します。'+(input.tagName==='TEXTAREA'?'Enterで改行、続けて2回で確定します。Shift＋Enterも使えます。':'');
  input.focus({preventScroll:true});input.select();
 }
 // Enter twice confirms the label without clearing the selected diagram object.
@@ -773,11 +773,16 @@ $('props').addEventListener('keydown',e=>{
  if(e.repeat){e.preventDefault();e.stopPropagation();return;}
  e.preventDefault();e.stopPropagation();
  if(input.dataset.enterArmed==='true'){
-  input.dataset.enterArmed='';const selection=selected?{...selected}:null;
+  input.dataset.enterArmed='';
+  if(input.tagName==='TEXTAREA'&&input.value===input.enterNewlineValue&&input.selectionStart===input.enterNewlineIndex+1&&input.selectionEnd===input.selectionStart)input.setRangeText('',input.enterNewlineIndex,input.enterNewlineIndex+1,'end');
+  const selection=selected?{...selected}:null;
   input.dispatchEvent(new Event('change',{bubbles:true}));
   if(selection)selected=selection;
   $('viewport').setAttribute('tabindex','-1');$('viewport').focus({preventScroll:true});
- }else input.dataset.enterArmed='true';
+ }else{
+  if(input.tagName==='TEXTAREA'){const index=input.selectionStart;input.setRangeText('\n',index,input.selectionEnd,'end');input.dispatchEvent(new Event('input',{bubbles:true}));input.enterNewlineIndex=index;input.enterNewlineValue=input.value}
+  input.dataset.enterArmed='true';
+ }
 });
 $('canvases').addEventListener('dblclick',e=>{if(mode==='select'){e.preventDefault();setMode('draw')}});
 function creationPosition(){
