@@ -3,7 +3,7 @@
 .commentText{cursor:move}#props textarea{height:100px;font:inherit}
 .elseDrag{cursor:ns-resize;touch-action:none}.elseDrag:hover .elseLine{stroke:#ffd36e;stroke-width:3}
 svg{box-sizing:content-box}#viewport{overflow-anchor:none}#canvases{user-select:none}
-.unusedActor{stroke:#ff6b6b!important;stroke-width:3!important}
+.unusedActor:not(.selected){stroke:#ff6b6b!important;stroke-width:3!important}
 
 #drawMode{background:#203e59;border-color:#55b6ff;color:#e4f4ff;box-shadow:0 0 0 1px #55b6ff38,0 0 10px #279dff55}
 #drawMode:hover{background:#295576;box-shadow:0 0 0 1px #55b6ff66,0 0 14px #279dff88}
@@ -788,7 +788,7 @@ $('props').addEventListener('keydown',e=>{
  e.preventDefault();e.stopPropagation();
  if(input.dataset.enterArmed==='true'){
   input.dataset.enterArmed='';
-  if(input.tagName==='TEXTAREA'&&input.value===input.enterNewlineValue&&input.selectionStart===input.enterNewlineIndex+1&&input.selectionEnd===input.selectionStart)input.setRangeText('',input.enterNewlineIndex,input.enterNewlineIndex+1,'end');
+  if(input.tagName==='TEXTAREA'&&input.enterNewlineIndex===input.enterNewlineValue.length-1&&input.value===input.enterNewlineValue&&input.selectionStart===input.enterNewlineIndex+1&&input.selectionEnd===input.selectionStart)input.setRangeText('',input.enterNewlineIndex,input.enterNewlineIndex+1,'end');
   const selection=selected?{...selected}:null;
   input.dispatchEvent(new Event('change',{bubbles:true}));
   if(selection)selected=selection;
