@@ -21,6 +21,7 @@ body.shortcutMode #editorMain,body.shortcutMode .editorBar{display:none!importan
 body.classMode #editorMain,body.classMode .editorBar{display:none!important}#classViewport{height:70vh;overflow:auto;background:#222630;padding:12px}#classBoard{position:relative;background-image:radial-gradient(#505a6e 1px,transparent 1px);background-size:20px 20px}#classEdges{position:absolute;inset:0;width:100%;height:100%;background:transparent;border:0;pointer-events:none}#classNodes{position:absolute;inset:0;pointer-events:none}.classCard{position:absolute;width:320px;background:#2d3340;border:2px solid #829ac0;border-radius:7px;pointer-events:auto;overflow:hidden}.classCard.classSelected{border-color:#ffd36e;box-shadow:0 0 0 2px #ffd36e55}.classGrip{padding:8px 10px;background:#415a7b;cursor:move;touch-action:none;font-weight:bold}.classGrip span{float:right;font-weight:normal;font-size:11px}.classNameRow{display:flex;gap:5px;padding:8px}.classNameRow>*{width:50%;min-width:0}.className{font-weight:bold}.classImport{margin:0 8px 8px;font-size:12px;max-width:calc(100% - 16px)}.classMemberHeading{display:flex;align-items:center;justify-content:space-between;border-top:1px solid #596478;padding:7px 8px;color:#bed3ee}.classMemberHeading button{font-size:11px;padding:4px}.classMember{display:flex;gap:4px;align-items:center;padding:4px 8px}.classMemberValue{flex:1;min-width:0;width:80px;padding:5px}.classMemberValue:read-only{color:#aebfd9;background:#293747}.classSync{display:flex;align-items:center;gap:2px;white-space:nowrap;margin:0;font-size:11px}.classSync input{margin:0}.classRemoveMember{padding:3px 6px}.classCodePanel{padding:12px}.classCodePanel summary{cursor:pointer}.classCodePanel textarea{margin-top:10px;height:160px}
 .classCard{display:flex;flex-direction:column;min-width:240px;min-height:150px}.classGrip{flex-shrink:0}.classBody{flex:1;min-height:0;overflow:auto;padding-bottom:14px}.classResizeHandle{position:absolute;right:0;bottom:0;width:17px;height:17px;background:linear-gradient(135deg,transparent 35%,#ffcf70 36%);cursor:nwse-resize;touch-action:none;z-index:2}
 #classViewport{cursor:grab;touch-action:none}#classViewport.panning,#classViewport.panning *{cursor:grabbing!important}#classBoard{margin:240px}.classCard{cursor:default}.classCard{isolation:isolate}.classCard.classSelected{z-index:1}.classCard button:disabled{opacity:.45;cursor:not-allowed}.classCard.isInterface{border-color:#65d692}.classCard.isInterface.classSelected{box-shadow:0 0 0 2px #ffd36e99}.classGripName{display:inline-block;max-width:calc(100% - 100px);overflow:hidden;text-overflow:ellipsis;vertical-align:middle;white-space:nowrap}.classSettingsPanel{padding:14px;background:#2d3340;border:1px solid #526078;border-radius:8px;margin:12px 0 22px}.classSettingsPanel label{font-size:13px;line-height:1.6}.classExclusion{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:8px}.classExclusion button{font-size:12px}.classImportFields{margin:0 8px 8px;font-size:12px;max-width:calc(100% - 16px)}
+.classMemberDrag{cursor:grab;flex-shrink:0;font-size:12px;padding:3px;color:#b6c9e0}.classMemberDrag:active{cursor:grabbing}.classMember.memberDragging{opacity:.4}.classMember.memberDropTarget{outline:2px solid #76bbfa;outline-offset:-2px}
 </style></head><body>
 <header><span class="sectionHeading">全体操作</span><button id="newProject">新規作成</button><button id="addDiagram">＋図</button><button id="renameDiagram">図の名前変更</button><button id="deleteDiagram" style="border-color:#b36b6b">図を削除</button><button id="allDiagrams">全図表示</button><button id="saveMd">MD保存</button><span id="mdSaveNotice" class="hint" role="status"></span><button id="loadMd">MD読込</button><input id="file" type="file" accept=".md,.mmd,.txt" hidden></header>
 <div class="bar viewBar"><span class="sectionHeading">画面切替</span><button id="viewEditor" class="on">実エディター</button><button id="viewFunctions">関数一覧・関係図</button><button id="viewClasses">クラス図作成</button><button id="viewShortcuts">設定</button><span class="sectionHeading">表示倍率</span><button id="zoomOut" aria-label="縮小">−</button><input id="zoomLevel" type="text" inputmode="numeric" pattern="[0-9]*" value="100" aria-label="表示倍率（％）" title="表示倍率（1〜300％、1％刻み）" style="width:64px;text-align:right"><span>%</span><button id="zoomIn" aria-label="拡大">＋</button><button id="zoomReset">100%に戻す</button><label for="leftPadding">左余白（px）</label><input id="leftPadding" type="number" min="0" max="2000" step="10" value="120" title="図の左側に追加する余白（0〜2000px）"></div>
@@ -895,7 +896,7 @@ function validClassModel(value){return !!value&&Array.isArray(value.classes)&&Ar
 function readClassModel(source){const match=source.match(/<!--\s*seq-editor-classes:([^]*?)\s*-->/);if(!match)return null;try{const value=JSON.parse(decodeURIComponent(match[1].trim()));return validClassModel(value)?value:null}catch{return null}}
 function classMermaid(){
  const names=new Map(classModel.classes.map(c=>[c.id,classCodeName(c.name)])),lines=['classDiagram'];
- for(const c of classModel.classes){lines.push('    class '+names.get(c.id)+' {');if(c.isInterface)lines.push('        <<interface>>');for(const m of c.members)lines.push('        '+(m.kind==='method'?'+':'-')+m.value.replace(/[\r\n{}]/g,' '));lines.push('    }')}
+ for(const c of classModel.classes){lines.push('    class '+names.get(c.id)+' {');if(c.isInterface)lines.push('        <<interface>>');for(const m of [...c.members.filter(m=>m.kind==='method'),...c.members.filter(m=>m.kind==='field')])lines.push('        '+(m.kind==='method'?'+':'-')+m.value.replace(/[\r\n{}]/g,' '));lines.push('    }')}
  for(const e of classModel.edges)lines.push('    '+names.get(e.from)+(e.kind==='dependency'?' --> ':' <.. ')+names.get(e.to));
  return lines.join('\n');
 }
@@ -928,7 +929,7 @@ function renderClassView(){
    const input=row.querySelector('.classMemberValue');input.value=member.value;input.readOnly=!!member.sync;input.title=member.sync?'シーケンス図と同期中です。変更するには同期を外してください。':'';
    bindClassTextInput(input,member,'value');
    const check=row.querySelector('[type=checkbox]');if(check){check.checked=!!member.sync;check.onchange=()=>{const group=[...classIncoming(c)].find(([name,ids])=>name===member.value||ids.some(id=>member.sources?.includes(id)));if(check.checked&&!group){check.checked=false;classNotice('対応するシーケンス図の関数がありません。参加者と関数名を確認してください。');return}classBackup();member.sync=check.checked;if(member.sync){member.sourceName=group[0];member.sources=group[1]}classCommit()}}
-   row.querySelector('.classRemoveMember').onclick=()=>{classBackup();c.members=c.members.filter(m=>m.id!==member.id);if(c.autoImport)c.autoImport=false;classCommit()};
+   bindClassMemberReorder(row,c,member);row.querySelector('.classRemoveMember').onclick=()=>{classBackup();c.members=c.members.filter(m=>m.id!==member.id);if(c.autoImport)c.autoImport=false;classCommit()};
    card.querySelector(member.kind==='method'?'.classMethods':'.classFields').append(row);
   }
   const grip=card.querySelector('.classGrip');
@@ -984,15 +985,21 @@ function renderClassSettings(){
  const list=$('classExclusions');list.replaceChildren();for(const entry of options.excluded){const row=document.createElement('div');row.className='classExclusion';const label=document.createElement('span'),actor=participants.find(a=>a.id===entry.id);label.textContent=actor?actor.name+' ('+actor.id+')':entry.id+'（参加者なし）';const remove=document.createElement('button');remove.textContent='除外を解除';remove.onclick=()=>{settings.classOptions={...classOptions(),excluded:classOptions().excluded.filter(e=>e!==entry)};save();renderClassSettings()};row.append(label,remove);list.append(row)}
 }
 function classFieldCandidates(c){
- const excluded=classExcludedIds(),candidates=new Map();
- for(const d of diagrams){const events=expanded(d),view={...d,actors:actorsForEvents(d,events)};const targets=new Set(events.filter(m=>m.type==='msg'&&m.from===c.actorId&&isFunctionCall(view,m)&&!excluded.has(m.to)).map(m=>m.to));
-  for(const id of targets){const actor=view.actors.find(a=>a.id===id);if(!actor)continue;candidates.set('actor:'+id,actor.name+' _XXX');
-   for(const note of events.filter(i=>i.type==='note'&&i.side==='over')){const start=view.actors.findIndex(a=>a.id===note.at),end=view.actors.findIndex(a=>a.id===(note.toAt||note.at)),target=view.actors.findIndex(a=>a.id===id);if(start<0||end<0||target<Math.min(start,end)||target>Math.max(start,end))continue;const text=plainLines(note.label).join(' ');if(text)candidates.set('note:'+id+':'+text,text+' _XXX')}
-  }
+ buildRegistry();const excluded=classExcludedIds(),candidates=new Map();
+ for(const d of diagrams)for(const call of d.items.filter(m=>m.type==='msg'&&m.from===c.actorId&&isFunctionCall(d,m)&&!excluded.has(m.to))){
+  const actor=d.actors.find(a=>a.id===call.to);if(!actor)continue;candidates.set('actor:'+actor.id,actor.name+' _XXX');
+  for(const note of directFunctionNotes(d,call)){const text=plainLines(note.label).join(' ');if(text)candidates.set('note:'+actor.id+':'+text,text+' _XXX')}
  }
  return [...candidates].map(([key,value])=>({key,value}));
 }
-function importClassFields(c){if(classMemberBlocked(c,'field'))return;const candidates=classFieldCandidates(c).filter(candidate=>!c.members.some(m=>m.kind==='field'&&(m.importedFieldKey===candidate.key||m.value===candidate.value)));if(!candidates.length){classNotice('追加できるフィールド変数がありません。呼び出し先・Note over・除外設定を確認してください。');return}classBackup();for(const field of candidates)c.members.push({id:uid(),kind:'field',value:field.value,sync:false,importedFieldKey:field.key});classCommit();classNotice(candidates.length+'件のフィールド変数を追加しました。')}
+function importClassFields(c){
+ if(classMemberBlocked(c,'field'))return;
+ const all=classFieldCandidates(c),validKeys=new Set(all.map(field=>field.key));
+ const stale=new Set(c.members.filter(m=>{if(m.kind!=='field'||!m.importedFieldKey?.startsWith('note:')||validKeys.has(m.importedFieldKey))return false;const original=m.importedFieldValue??m.importedFieldKey.replace(/^note:[^:]+:/,'')+' _XXX';return m.value===original}).map(m=>m.id));
+ const kept=c.members.filter(m=>!stale.has(m.id)),candidates=all.filter(candidate=>!kept.some(m=>m.kind==='field'&&(m.importedFieldKey===candidate.key||m.value===candidate.value)));
+ if(!candidates.length&&!stale.size){classNotice('追加できるフィールド変数がありません。呼び出し先・Note over・除外設定を確認してください。');return}
+ classBackup();c.members=kept;for(const field of candidates)c.members.push({id:uid(),kind:'field',value:field.value,sync:false,importedFieldKey:field.key,importedFieldValue:field.value});classCommit();classNotice(candidates.length+'件のフィールド変数を追加しました。'+(stale.size?'範囲外になった未編集のノート項目を'+stale.size+'件除外しました。':''));
+}
 function classCodeName(value){const name=String(value||'無名クラス').replace(/[\r\n`]/g,' ').trim()||'無名クラス';return /^[\p{L}_$][\p{L}\p{N}_$]*$/u.test(name)?name:'`'+name+'`'}
 $('classInterface').onclick=()=>{const c=classSelected?.kind==='class'&&classModel.classes.find(c=>c.id===classSelected.id);if(!c)return;classBackup();c.isInterface=!c.isInterface;classCommit()};
 $('classViewport').addEventListener('pointerdown',e=>{
@@ -1000,6 +1007,34 @@ $('classViewport').addEventListener('pointerdown',e=>{
  viewport.onpointermove=event=>{if(!viewport.hasPointerCapture(event.pointerId))return;viewport.scrollLeft=start.left-(event.clientX-start.x);viewport.scrollTop=start.top-(event.clientY-start.y)};
  const finish=event=>{viewport.onpointermove=null;viewport.onpointerup=null;viewport.onpointercancel=null;viewport.onlostpointercapture=null;viewport.classList.remove('panning');if(viewport.hasPointerCapture(event.pointerId))viewport.releasePointerCapture(event.pointerId)};viewport.onpointerup=finish;viewport.onpointercancel=finish;viewport.onlostpointercapture=finish;
 });
+
+let classMemberDragState=null;
+function reorderClassMember(c,fromId,toId){const source=c.members.find(m=>m.id===fromId),target=c.members.find(m=>m.id===toId);if(!source||!target||source===target||source.kind!==target.kind)return false;const ordered=c.members.filter(m=>m.kind===source.kind),from=ordered.indexOf(source),to=ordered.indexOf(target);classBackup();ordered.splice(from,1);ordered.splice(to,0,source);let index=0;c.members=c.members.map(m=>m.kind===source.kind?ordered[index++]:m);classCommit();return true}
+function bindClassMemberReorder(row,c,member){
+ const handle=document.createElement('button');handle.type='button';handle.className='classMemberDrag';handle.textContent='⋮⋮';handle.draggable=true;handle.title='ドラッグで順番を変更（Alt＋↑／↓でも移動できます）';handle.setAttribute('aria-label',member.kind==='method'?'関数を並べ替え':'フィールド変数を並べ替え');row.prepend(handle);
+ handle.ondragstart=e=>{classMemberDragState={classId:c.id,memberId:member.id,kind:member.kind};e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',JSON.stringify(classMemberDragState));row.classList.add('memberDragging')};
+ handle.ondragend=()=>{classMemberDragState=null;document.querySelectorAll('.memberDragging,.memberDropTarget').forEach(el=>el.classList.remove('memberDragging','memberDropTarget'))};
+ const allowed=()=>classMemberDragState?.classId===c.id&&classMemberDragState.kind===member.kind&&classMemberDragState.memberId!==member.id;
+ row.ondragover=e=>{if(!allowed())return;e.preventDefault();e.dataTransfer.dropEffect='move';row.classList.add('memberDropTarget')};row.ondragleave=()=>row.classList.remove('memberDropTarget');
+ row.ondrop=e=>{if(!allowed())return;e.preventDefault();e.stopPropagation();const from=classMemberDragState.memberId;classMemberDragState=null;reorderClassMember(c,from,member.id)};
+ handle.onkeydown=e=>{if(!e.altKey||!['ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();e.stopPropagation();const group=c.members.filter(m=>m.kind===member.kind),index=group.indexOf(member),next=group[index+(e.key==='ArrowDown'?1:-1)];if(next&&reorderClassMember(c,member.id,next.id))$('classNodes').querySelector('[data-member-id="'+member.id+'"] .classMemberDrag').focus()};
+}
+function directFunctionNotes(d,call){
+ const reference=functionReference(d,call),messages=sort(d.items).filter(i=>i.type==='msg'),definition=reference||extract(d,messages.findIndex(m=>m.id===call.id)),source=diagrams.find(d=>d.id===definition.source);if(!source)return [];
+ const root=definition.root,stack=[{from:root.from,to:root.to}],notes=[];
+ for(const item of sort(definition.body)){
+  if(item.type==='msg'){
+   const returning=stack.findLastIndex(frame=>item.from===frame.to&&item.to===frame.from);
+   if(returning>=0){stack.length=returning;if(!stack.length)break;continue}
+   if(item.from===root.from&&isFunctionCall(source,item))break;
+   const top=stack[stack.length-1];if(top&&item.from===top.to&&isFunctionCall(source,item)&&!functionReference(source,item))stack.push({from:item.from,to:item.to});
+  }else if(item.type==='note'&&item.side==='over'&&stack.length===1){
+   const first=source.actors.findIndex(a=>a.id===item.at),last=source.actors.findIndex(a=>a.id===(item.toAt||item.at)),callee=source.actors.findIndex(a=>a.id===root.to);
+   if(first>=0&&last>=0&&callee>=Math.min(first,last)&&callee<=Math.max(first,last))notes.push(item);
+  }
+ }
+ return notes;
+}
 
 renderTemplates();render();updateMdSaveNotice();
 </script></body></html>
