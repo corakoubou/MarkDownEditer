@@ -254,7 +254,7 @@ function mermaidEvents(d){
  for(const {item:i,codeY} of events){
   while(opened.length&&codeY>=opened[opened.length-1].bottom){emitDue(opened[opened.length-1],Infinity,true);lines.push('    end');opened.pop()}
   for(const frame of opened)emitDue(frame,codeY);
-  const label=(i.type==='msg'?variableTypeCode(i.label):String(i.label||'')).replace(/\r?\n/g,'<br/>');
+  const label=variableTypeCode(i.label).replace(/\r?\n/g,'<br/>');
   if(i.type==='group'){
    lines.push(`    ${i.group||'opt'} ${label}`);
    opened.push({item:i,bottom:i.y+Math.max(1,Number(i.h)||110),emitted:new Set()});
@@ -938,7 +938,7 @@ function readClassModel(source){const match=source.match(/<!--\s*seq-editor-clas
 function classRelationOperator(edge){const source=classModel.classes.find(c=>c.id===edge.from),target=classModel.classes.find(c=>c.id===edge.to);return source?.isInterface&&!target?.isInterface?'..|>':'..>'}
 function classMermaid(){
  const names=new Map(classModel.classes.map(c=>[c.id,classCodeName(c.name)])),lines=['classDiagram'];
- for(const c of classModel.classes){lines.push('    class '+names.get(c.id)+' {');if(c.isInterface)lines.push('        <<interface>>');for(const m of [...c.members.filter(m=>m.kind==='method'),...c.members.filter(m=>m.kind==='field')])lines.push('        '+(m.kind==='method'?'+':'-')+m.value.replace(/[\r\n{}]/g,' '));lines.push('    }')}
+ for(const c of classModel.classes){lines.push('    class '+names.get(c.id)+' {');if(c.isInterface)lines.push('        <<interface>>');for(const m of [...c.members.filter(m=>m.kind==='method'),...c.members.filter(m=>m.kind==='field')])lines.push('        '+(m.kind==='method'?'+':'-')+variableTypeCode(m.value).replace(/[\r\n{}]/g,' '));lines.push('    }')}
  for(const e of classModel.edges)lines.push('    '+names.get(e.from)+(' '+classRelationOperator(e)+' ')+names.get(e.to));
  return lines.join('\n');
 }
@@ -1097,7 +1097,7 @@ function syncUrlDesign(){
  urlDesign.rows=active;urlDesign.archivedRows=archived;
 }
 function classFunctionLabel(message){const parsed=parseUrlLabel(message.label);if(!parsed)return String(message.label||'');const matches=row=>normalizeUrlMethod(row.method)===parsed.method&&row.url.trim()===parsed.url;const row=urlDesign.rows.find(row=>row.sourceKey===parsed.key&&matches(row))||urlDesign.rows.find(matches);return row?.functionName.trim()||String(message.label||'')}
-function urlMarkdownCell(value){return String(value??'').replace(/\\/g,'\\\\').replace(/\|/g,'\\|').replace(/\r?\n/g,'<br/>')}
+function urlMarkdownCell(value){return variableTypeCode(value).replace(/\\/g,'\\\\').replace(/\|/g,'\\|').replace(/\r?\n/g,'<br/>')}
 function urlDesignMarkdown(allColumns=false){const columns=URL_DESIGN_COLUMNS.filter(c=>allColumns||urlDesign.columns.includes(c.key));if(!columns.length)return '';return ['| '+columns.map(c=>c.label).join(' | ')+' |','| '+columns.map(()=>'---').join(' | ')+' |',...urlDesign.rows.map(row=>'| '+columns.map(c=>urlMarkdownCell(row[c.key])).join(' | ')+' |')].join('\n')}
 function urlDesignDocument(){return urlDesign.initialized||urlDesign.rows.length?'\n\n<!-- seq-editor-urls:'+encodeURIComponent(JSON.stringify(urlDesign))+' -->\n\n## URL設計\n\n'+urlDesignMarkdown(true):''}
 function updateUrlDesignPreview(){const text=urlDesignMarkdown();$('urlDesignPreview').value=text;$('copyUrlDesign').disabled=!urlDesign.columns.length;$('urlDesignCount').textContent=urlDesign.rows.length+'件';$('classCode').value=classMermaid();$('allCode').value=displayEditorCode(generate(true))}
