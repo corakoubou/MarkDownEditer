@@ -106,11 +106,17 @@ $('newProject').onclick=createNewProject;
 window.addEventListener('beforeunload',e=>{if(!hasUnsavedMd())return;e.preventDefault();e.returnValue='';});
 $('props').addEventListener('input',e=>{if(e.target.dataset.key==='label')e.target.dataset.enterArmed='';pendingPropertyEdits=true;updateMdSaveNotice()});
 $('code').addEventListener('input',updateMdSaveNotice);$('diagramMemo').addEventListener('input',updateMdSaveNotice);
-// Discover a method from the first call site that has a matching reply, including nested calls.
+// Explicit activation markers define the method; unmarked legacy calls use matching replies.
 function extract(d,start){
  let seq=sort(d.items).filter(i=>i.type==='msg'),root=seq[start],stack=[{caller:root.from,callee:root.to}],closed=false,last=root.y;
+ let activationDepth=root.activate?1:0;
  for(let j=start+1;j<seq.length;j++){
   let m=seq[j],top=stack[stack.length-1];last=m.y;
+  if(root.activate){
+   if(m.deactivate&&m.from===root.to){activationDepth=Math.max(0,activationDepth-1);if(!activationDepth&&m.to===root.from){closed=true;break}}
+   if(m.activate&&m.to===root.to)activationDepth++;
+   continue;
+  }
   const returning=stack.findLastIndex(frame=>m.from===frame.callee&&m.to===frame.caller);
   if(returning>=0){stack.length=returning;if(!stack.length){closed=true;break}}
   else if(m.from===top.callee&&m.to!==top.caller)stack.push({caller:m.from,callee:m.to});
@@ -132,7 +138,7 @@ function functionOwnsComment(d,root,last,comment){
  return !actor||!!message&&message.y>=root.y&&message.y<=last;
 }
 function functionOwnsGroup(d,root,last,frame){
- const bottom=frame.y+(frame.h||110);if(bottom>last||frame.y>last)return false;
+ const bottom=frame.y+(frame.h||110);if(frame.y>last)return false;if(bottom>last&&(!root.activate||d.items.some(item=>item.id!==frame.id&&item.type!=='group'&&item.y>last&&item.y<=bottom)))return false;
  if(frame.y>=root.y)return true;
  // A frame may begin above the entry arrow when that arrow enters from outside.
  const left=frame.x??30,right=left+(frame.w??Math.max(690,ax(d,d.actors.at(-1)?.id)+110));
@@ -678,7 +684,7 @@ function renderFunctionView(){
  out+=activationBars(events.map(i=>({...i,y:i.y+offset})),{actors:actors.map(a=>({id:a.id}))},h);
  for(const i of events){let y=i.y+offset;if(i.type==='msg'){let a=xFor(i.from),b=xFor(i.to);if(a<0||b<0)continue;let path=a===b?`M${a} ${y} h65 v30 h-65`:`M${a} ${y} H${b}`;out+=`<path d="${path}" stroke="#7cbbff" stroke-width="2" ${i.style?.includes('--')?'stroke-dasharray="7 5"':''} fill="none" marker-end="url(#funcArrow)"/>${svgMultiline(functionDisplayLabel({actors},i),a===b?a+45:(a+b)/2,y-10-(plainLines(i.label).length-1)*16,'fill="white" text-anchor="middle" font-size="12"')}`}
  else if(i.type==='note'){let a=xFor(i.at),b=i.toAt?xFor(i.toAt):a;if(a<0)continue;let x=i.side==='over'?(a+(b<0?a:b))/2-82.5:a+(i.side==='left'?-180:20);let lines=plainLines(i.label),nh=Math.max(55,lines.length*16+18);out+=`<rect x="${x}" y="${y-25}" width="165" height="${nh}" rx="4" fill="#edda99" stroke="#ad944c"/>${svgMultiline(i.label,x+8,y-3,'font-size="12" fill="#29220f"')}`}
- else if(i.type==='group'){let x=30,gh=i.h||110;out+=`<rect x="${x}" y="${y}" width="${w-60}" height="${gh}" fill="#a190c4" fill-opacity=".1" stroke="#b8a5eb" stroke-dasharray="7 4"/><rect x="${x}" y="${y}" width="110" height="25" rx="3" fill="#665783"/>${svgMultiline((i.group||'opt')+' '+i.label,x+7,y+17,'font-size="12" fill="white"')}`}}
+ else if(i.type==='group'){let x=30,gh=i.h||110;out+=`<rect x="${x}" y="${y}" width="${w-60}" height="${gh}" fill="#a190c4" fill-opacity=".1" stroke="#b8a5eb" stroke-dasharray="7 4"/><rect x="${x}" y="${y}" width="110" height="25" rx="3" fill="#665783"/>${svgMultiline((i.group||'opt')+' '+i.label,x+7,y+17,'font-size="12" fill="white"')}${groupBranches(i).map(branch=>`<line x1="${x}" y1="${y+branch.offset}" x2="${w-30}" y2="${y+branch.offset}" stroke="#b8a5eb" stroke-dasharray="5 3"/>${svgMultiline('else '+branch.label,x+9,y+branch.offset+17,'font-size="12" fill="#e1d5ff"')}`).join('')}`}}
  out+='</svg>';detail.innerHTML=`<div class="functionMeta">定義元：${esc(d.name)} ／ ${r.closed?'戻り矢印まで登録':'途中終了・末尾まで登録'} ／ ${events.filter(i=>i.type==='msg'&&i.id!==r.root.id).length}本の後続矢印・${events.filter(i=>i.type==='note').length}件のNote・${events.filter(i=>i.type==='group').length}件の制御枠</div>`+out;applyZoom();
 }
 // Resizable right-side inspector (desktop); persist independently from diagram data.
@@ -1076,7 +1082,7 @@ function directFunctionNotes(d,call){
  for(const item of sort(definition.body)){
   if(item.type==='msg'){
    const returning=stack.findLastIndex(frame=>item.from===frame.to&&item.to===frame.from);
-   if(returning>=0){stack.length=returning;if(!stack.length)break;continue}
+   if(returning>=0){if(root.activate&&returning===0&&!item.deactivate){stack.length=1;continue}stack.length=returning;if(!stack.length)break;continue}
    if(item.from===root.from&&isFunctionCall(source,item))break;
    const top=stack[stack.length-1];if(top&&item.from===top.to&&isFunctionCall(source,item)&&!functionReference(source,item))stack.push({from:item.from,to:item.to});
   }else if(item.type==='note'&&item.side==='over'&&stack.length===1){
@@ -1148,7 +1154,7 @@ function unitTestAutomaticKinds(participant,method){return withVisibleRegistry((
   const messages=sort(d.items).filter(i=>i.type==='msg'),definition=functionReference(d,call)||extract(d,messages.findIndex(m=>m.id===call.id));
   const root=definition.root,source=diagrams.find(d=>d.id===definition.source);
   for(const item of expandedDefinition(definition).filter(item=>item.type==='msg'&&item.id!==root.id)){
-   if(item.from===root.to&&item.to===root.from){const label=String(item.label||'').normalize('NFKC').trim();if(label&&!/^void(?:\s*\(\s*\))?$/i.test(label))hasReturn=true;break}
+   if(item.from===root.to&&item.to===root.from){const label=String(item.label||'').normalize('NFKC').trim();if(label&&!/^void(?:\s*\(\s*\))?$/i.test(label))hasReturn=true;if(!root.activate)break;continue}
    if(item.from===root.to&&item.to!==root.to&&isFunctionCall(source,item))hasCalls=true;
   }
  }
