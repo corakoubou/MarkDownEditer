@@ -254,7 +254,7 @@ function mermaidEvents(d){
  for(const {item:i,codeY} of events){
   while(opened.length&&codeY>=opened[opened.length-1].bottom){emitDue(opened[opened.length-1],Infinity,true);lines.push('    end');opened.pop()}
   for(const frame of opened)emitDue(frame,codeY);
-  const label=String(i.label||'').replace(/\r?\n/g,'<br/>');
+  const label=(i.type==='msg'?variableTypeCode(i.label):String(i.label||'')).replace(/\r?\n/g,'<br/>');
   if(i.type==='group'){
    lines.push(`    ${i.group||'opt'} ${label}`);
    opened.push({item:i,bottom:i.y+Math.max(1,Number(i.h)||110),emitted:new Set()});
@@ -491,6 +491,7 @@ document.addEventListener('pointercancel',e=>{if(gesture?.pointerId===e.pointerI
 document.addEventListener('lostpointercapture',e=>{if(gesture?.pointerId===e.pointerId&&gesture.svg===e.target)cancelGesture()});
 window.addEventListener('blur',cancelGesture);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&gesture){e.preventDefault();cancelGesture()}});
+function variableTypeCode(label){return String(label||'').replace(/\{@@([^{}\r\n]+)\}/g,(token,type)=>type.trim()?type:token)}
 function variableTypeTokens(label){return [...String(label||'').matchAll(/\{@@([^{}\r\n]+)\}/g)].filter(match=>match[1].trim())}
 function registeredVariableTypes(){return [...new Set(diagrams.flatMap(d=>d.items.filter(item=>item.type==='msg').flatMap(item=>variableTypeTokens(item.label).map(match=>match[1]))))].sort((a,b)=>a.localeCompare(b,'ja'))}
 function commitSharedTypeLabel(message,input){
