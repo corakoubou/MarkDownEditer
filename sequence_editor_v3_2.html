@@ -944,16 +944,13 @@ function renderClassView(){
   card.querySelector('.classImport').disabled=!participants.some(a=>a.id===c.actorId)||classMemberBlocked(c,'method');card.querySelector('.classImportFields').disabled=!participants.some(a=>a.id===c.actorId)||classMemberBlocked(c,'field');card.querySelector('.classImportFields').onclick=()=>importClassFields(c);
   card.querySelector('.classImport').onclick=()=>{if(classMemberBlocked(c,'method'))return;classBackup();c.autoImport=true;classCommit()};
   for(const [selector,kind] of [['.classAddMethod','method'],['.classAddField','field']]){card.querySelector(selector).disabled=classMemberBlocked(c,kind);card.querySelector(selector).onclick=()=>{if(classMemberBlocked(c,kind))return;classBackup();const member={id:uid(),kind,value:'',sync:false};c.members.push(member);classCommit();$('classNodes').querySelector('[data-member-id="'+member.id+'"] input').focus()};}
-  const fieldKeys=new Set(classFieldCandidates(c).map(field=>field.key)),savedRegistry=registry;let allFieldKeys;try{buildRegistry();allFieldKeys=new Set(classVisibleFieldCandidates(c,diagrams).map(field=>field.key))}finally{registry=savedRegistry}
-  for(const member of [...c.members,...(c.excludedMembers||[])]){
-   if(member.importedFieldKey&&!fieldKeys.has(member.importedFieldKey)&&allFieldKeys.has(member.importedFieldKey)){member.designExcluded=true;continue}
-   member.designExcluded=false;
+  for(const member of c.members){
    const row=document.createElement('div');row.className='classMember';row.dataset.memberId=member.id;
    row.innerHTML='<span>'+(member.kind==='method'?'+':'−')+'</span><input class="classMemberValue" aria-label="'+(member.kind==='method'?'関数名':'フィールド変数')+'">'+(member.kind==='method'?'<label class="classSync"><input type="checkbox" aria-label="関数名を同期">同期</label>':'')+'<button class="classRemoveMember" aria-label="項目を削除">×</button>';
    const input=row.querySelector('.classMemberValue');input.value=member.value;input.readOnly=!!member.sync;input.title=member.sync?'シーケンス図と同期中です。変更するには同期を外してください。':'';
    bindClassTextInput(input,member,'value');
    const check=row.querySelector('[type=checkbox]');if(check){check.checked=!!member.sync;check.onchange=()=>{const group=[...classIncoming(c)].find(([name,ids])=>name===member.value||ids.some(id=>member.sources?.includes(id)));if(check.checked&&!group){check.checked=false;classNotice('対応するシーケンス図の関数がありません。参加者と関数名を確認してください。');return}classBackup();member.sync=check.checked;if(member.sync){member.sourceName=group[0];member.sources=group[1]}classCommit()}}
-   bindClassMemberReorder(row,c,member);row.querySelector('.classRemoveMember').onclick=()=>{classBackup();c.members=c.members.filter(m=>m.id!==member.id);if(c.autoImport)c.autoImport=false;classCommit()};
+   bindClassMemberReorder(row,c,member);row.querySelector('.classRemoveMember').onclick=()=>{classBackup();c.members=c.members.filter(m=>m.id!==member.id);c.excludedMembers=(c.excludedMembers||[]).filter(m=>m.id!==member.id);if(c.autoImport)c.autoImport=false;classCommit()};
    card.querySelector(member.kind==='method'?'.classMethods':'.classFields').append(row);
   }
   const grip=card.querySelector('.classGrip');
