@@ -1215,10 +1215,10 @@ function expandIntegratedMarkdown(){
   '性能チェック表':performanceMarkdown()
  };
  const counts=new Map();
- return integratedMarkdown.replace(/\{@(シーケンス図|URL設計|クラス図|単体テスト|単体テスト設計|性能チェック表)\}/g,(_,key,offset)=>{
+ return integratedMarkdown.replace(/\{@?(シーケンス図|URL設計|クラス図|単体テスト|単体テスト設計|性能チェック表)\}/g,(_,key,offset)=>{
   const kind=key==='単体テスト設計'?'単体テスト':key,text=parts[kind];if(kind!=='シーケンス図'&&kind!=='単体テスト')return text;
   const before=integratedMarkdown.slice(0,offset),context=integratedHeadingContext(before),parent=kind==='シーケンス図'?context.second:context.first;
-  const number=parent?.text.normalize('NFKC').match(kind==='シーケンス図'?/^(\d+)\.(\d+)(?:\.)?(?=\s|$)/:/^(\d+)(?:\.)?(?=\s|$)/);if(!number)return text;
+  const number=parent?.text.normalize('NFKC').match(kind==='シーケンス図'?/^(\d+)\.(\d+)(?:\.|(?=\s|$))/:/^(\d+)(?:\.|(?=\s|$))/);if(!number)return text;
   const prefix=kind==='シーケンス図'?number[1]+'．'+number[2]:number[1],scope=kind+':'+parent.position,next=()=>{const value=(counts.get(scope)||0)+1;counts.set(scope,value);return value};
   return numberIntegratedHeadings(text,kind==='シーケンス図'?3:2,prefix,next);
  });
