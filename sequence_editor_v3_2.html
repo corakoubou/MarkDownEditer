@@ -147,7 +147,19 @@ function functionOwnsGroup(d,root,last,frame){
 }
 function functionKey(m){return m.functionId?'independent:'+m.functionId:JSON.stringify([m.from,m.to,m.label])}
 function isFunctionCall(d,m){return m.type==='msg'&&d.actors.findIndex(a=>a.id===m.from)<d.actors.findIndex(a=>a.id===m.to)}
-function buildRegistry(sources=diagrams){registry={};for(let d of sources){let seq=sort(d.items).filter(i=>i.type==='msg');for(let i=0;i<seq.length;i++){let m=seq[i];if(!isFunctionCall(d,m))continue;let key=functionKey(m);const candidate=extract(d,i);const current=registry[key];if(!current||!!current.root.functionCopy&&!m.functionCopy||!!current.root.functionCopy===!!m.functionCopy&&!current.closed&&candidate.closed)registry[key]=candidate}}}
+function buildRegistry(sources=diagrams){
+ const candidates=new Map();registry={};
+ for(const d of sources){const messages=sort(d.items).filter(item=>item.type==='msg');for(let index=0;index<messages.length;index++){const root=messages[index];if(!isFunctionCall(d,root))continue;const key=functionKey(root);if(!candidates.has(key))candidates.set(key,[]);candidates.get(key).push(extract(d,index))}}
+ for(const [key,entries] of candidates){
+  const rank=entry=>[!entry.root.functionCopy,entry.root.functionSourceKey===key,!!entry.root.activate&&entry.closed,entry.closed,entry.closed?entry.body.filter(item=>item.type==='msg').length:0];
+  let chosen=entries[0];for(const candidate of entries.slice(1)){const a=rank(candidate),b=rank(chosen),different=a.findIndex((value,index)=>Number(value)!==Number(b[index]));if(different>=0&&Number(a[different])>Number(b[different]))chosen=candidate}
+  registry[key]=chosen;if(!chosen.root.functionCopy)chosen.root.functionSourceKey=key;
+ }
+}
+function rememberFunctionReference(d,message){
+ if(!isFunctionCall(d,message)||message.functionId)return;
+ const source=registry[functionKey(message)]||Object.values(registry).find(entry=>functionKey(entry.root)===functionKey(message));if(source&&(source.source!==d.id||source.root.id!==message.id)){message.functionCopy=true;delete message.functionSourceKey}else if(message.functionSourceKey!==functionKey(message))delete message.functionCopy;
+}
 function functionReference(d,m){if(!isFunctionCall(d,m))return null;const r=registry[functionKey(m)];return r&&(r.source!==d.id||r.root.id!==m.id)?r:null}
 function functionDisplayLabel(d,m){return (m.functionId&&isFunctionCall(d,m)?'【独立関数】 ':'')+m.label}
 function effectiveMessage(d,m){const r=functionReference(d,m);return r?{...m,activate:typeof m.functionActivate==='boolean'?m.functionActivate:!!(m.activate||r.root.activate)}:{...m}}
@@ -520,8 +532,9 @@ function commitSharedTypeLabel(message,input){
  }
  if(renames.size&&!confirm('全ての変数型をこの変数型に変更しますが、よろしいですか？\n\n'+[...renames].map(([from,to])=>from+' → '+to).join('\n')+'\n\n非表示の図を含む、全シーケンス図の同じ変数型を変更します。')){input.value=previous;input.dataset.sharedTypeCommitting='false';pendingPropertyEdits=false;updateMdSaveNotice();return}
  backup();
- if(renames.size)for(const d of diagrams)for(const item of d.items)if(item.type==='msg')item.label=String(item.label||'').replace(/\{@@([^{}\r\n]+)\}/g,(token,type)=>renames.has(type)?'{@@'+renames.get(type)+'}':token);
+ if(renames.size)for(const d of diagrams)for(const item of d.items)if(item.type==='msg'){const wasSource=item.functionSourceKey===functionKey(item);item.label=String(item.label||'').replace(/\{@@([^{}\r\n]+)\}/g,(token,type)=>renames.has(type)?'{@@'+renames.get(type)+'}':token);if(wasSource)item.functionSourceKey=functionKey(item);}
  let tokenIndex=0;message.label=next.replace(/\{@@([^{}\r\n]+)\}/g,(token,type)=>{if(!type.trim())return token;const old=oldTokens[tokenIndex++]?.[1];return oldTokens.length===newTokens.length&&old===type&&renames.has(type)?'{@@'+renames.get(type)+'}':token});
+ const owner=diagrams.find(d=>d.items.includes(message));if(owner)rememberFunctionReference(owner,message);
  render();props();save();
 }
 
