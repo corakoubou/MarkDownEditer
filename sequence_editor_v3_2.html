@@ -1384,11 +1384,13 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&['insertGap','inser
 $('toggleHiddenDiagramTabs').onclick=()=>{hideHiddenDiagramTabs=!hideHiddenDiagramTabs;try{localStorage.setItem('seq-editor-hide-hidden-tabs',String(hideHiddenDiagramTabs))}catch{}drawTabs()};
 function updateStickyParticipants(){
  if(!document.body.classList.contains('sequenceScreen'))return;
- const viewport=$('viewport'),top=viewport.getBoundingClientRect().top+viewport.clientTop+4;
+ const viewport=$('viewport'),top=viewport.getBoundingClientRect().top+viewport.clientTop;
  for(const svg of document.querySelectorAll('#canvases svg[data-diagram]')){
   const matrix=svg.getScreenCTM();if(!matrix||matrix.d<=0)continue;
   const shift=Math.max(0,Math.min(svg.viewBox.baseVal.height-75,(top-matrix.f)/matrix.d-20));
-  for(const header of svg.querySelectorAll(':scope > g[data-actor]'))header.setAttribute('transform','translate(0 '+shift+')');
+  const headers=[...svg.querySelectorAll(':scope > g[data-actor]')];let backdrop=svg.querySelector('[data-participant-backdrop]');
+  if(shift>0&&headers.length){if(!backdrop){backdrop=document.createElementNS('http://www.w3.org/2000/svg','rect');backdrop.dataset.participantBackdrop='';backdrop.setAttribute('fill','#2b303c');backdrop.setAttribute('pointer-events','none');svg.insertBefore(backdrop,headers[0])}for(const [key,value]of Object.entries({x:svg.viewBox.baseVal.x,y:20+shift-1/matrix.d,width:svg.viewBox.baseVal.width,height:55+2/matrix.d}))backdrop.setAttribute(key,value)}else backdrop?.remove();
+  for(const header of headers)header.setAttribute('transform','translate(0 '+shift+')');
  }
 }
 $('viewport').addEventListener('scroll',updateStickyParticipants,{passive:true});
