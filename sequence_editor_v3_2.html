@@ -39,6 +39,7 @@ body.sequenceScreen #editorMain{grid-template-columns:var(--diagram-nav-width,14
 .bar.editorBar>.hint{flex:1 1 260px;min-width:200px}
 .diagramNavHeading{display:flex;align-items:center;justify-content:space-between;gap:4px;flex-wrap:wrap;flex-shrink:0;margin-bottom:6px}#diagramNavigator .diagramNavHeading h3{margin:0}.diagramNavHeading button{font-size:10px;padding:3px;white-space:nowrap}.diagramNavHeading button[aria-pressed="true"]{background:#186f9f}
 .adjustableTableView{font-size:var(--view-content-font,14px)}.adjustableTableView :is(table,input,select,textarea,button,label,.hint,summary){font-size:var(--view-content-font,14px)!important}.tableViewControls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px}.tableViewControls label{display:flex;gap:8px;align-items:center;margin:0}.tableViewControls input{width:72px}.adjustableTableView .tableViewControls :is(input,button,label,span){font-size:12px!important}.resizableDesignTable{table-layout:fixed!important;min-width:0!important;max-width:none!important}.resizableDesignTable th{position:relative;width:auto!important;min-width:0!important;white-space:normal!important;padding-right:14px!important;overflow-wrap:anywhere}.resizableDesignTable td{min-width:0!important;overflow-wrap:anywhere}.resizableDesignTable :is(input,select,textarea){min-width:0!important;max-width:100%;box-sizing:border-box}.resizableDesignTable .unitChoices label{white-space:normal}.tableColumnResize{position:absolute;top:0;right:-3px;width:8px;height:100%;cursor:col-resize;touch-action:none;z-index:1}.tableColumnResize:hover,.tableColumnResize:focus{background:#76bbfa77;outline:none}
+.unitFunctionJump{margin-left:8px;padding:3px 6px;white-space:nowrap}
 </style></head><body class="sequenceScreen">
 <header><span class="sectionHeading">全体操作</span><button id="newProject">新規作成</button><button id="addDiagram">＋図</button><button id="renameDiagram">図の名前変更</button><button id="deleteDiagram" style="border-color:#b36b6b">図を削除</button><button id="allDiagrams">全図表示</button><button id="saveMd">MD保存</button><span id="mdSaveNotice" class="hint" role="status"></span><button id="loadMd">MD読込</button><input id="file" type="file" accept=".md,.mmd,.txt" hidden></header>
 <div class="bar viewBar"><span class="sectionHeading">画面切替</span><button id="viewEditor" class="on">シーケンス図</button><button id="viewFunctions">関数一覧・関係図</button><button id="viewClasses">クラス図作成</button><button id="viewUrlDesign">URL設計</button><button id="viewUnitTests">単体テスト設計</button><button id="viewVariableTypes">変数型登録リスト</button><button id="viewPerformance">性能チェック表</button><button id="viewIntegratedMd">MDファイル統合編集</button><button id="viewShortcuts">設定</button><span class="sectionHeading">表示倍率</span><button id="zoomOut" aria-label="縮小">−</button><input id="zoomLevel" type="text" inputmode="numeric" pattern="[0-9]*" value="100" aria-label="表示倍率（％）" title="表示倍率（1〜300％、1％刻み）" style="width:64px;text-align:right"><span>%</span><button id="zoomIn" aria-label="拡大">＋</button><button id="zoomReset">100%に戻す</button><label for="leftPadding">左余白（px）</label><input id="leftPadding" type="number" min="0" max="2000" step="10" value="120" title="図の左側に追加する余白（0〜2000px）"></div>
@@ -207,7 +208,9 @@ function actorsForEvents(d,events){
  return actors;
 }
 function jumpToFunctionSource(d,m){
- buildRegistry();const reference=functionReference(d,m);if(!reference)return;
+ buildRegistry();const reference=functionReference(d,m);if(reference)focusSequenceFunction(reference);
+}
+function focusSequenceFunction(reference){
  switchView('editor');
  active=reference.source;all=false;mode='select';lastCanvasClick=null;
  selected={diagram:reference.source,type:'item',id:reference.root.id};
@@ -1212,13 +1215,20 @@ function unitTestsMarkdown(){
 }
 function unitTestDocument(){return unitTestDesign.initialized||unitTestDesign.participants.length?'\n\n<!-- seq-editor-unit-tests:'+encodeURIComponent(JSON.stringify(unitTestDesign))+' -->\n\n## 単体テスト設計\n\n'+unitTestsMarkdown():''}
 function updateUnitTestPreview(){const cases=unitTestCases();$('unitTestMarkdown').value=unitTestsMarkdown();$('copyUnitTestDesign').disabled=!cases.length;$('unitCaseCount').textContent=cases.length+'件のテスト';$('unitEmptyTests').hidden=!!cases.length;$('allCode').value=displayEditorCode(generate(true))}
+function unitTestFunctionSource(method){
+ buildRegistry();for(const id of method.sources){for(const d of diagrams){const message=d.items.find(item=>item.id===id&&isFunctionCall(d,item));if(message)return functionReference(d,message)||{source:d.id,root:message}}}return null;
+}
+function unitTestFunctionJumpButton(method){
+ const button=document.createElement('button');button.type='button';button.className='unitFunctionJump';button.dataset.unitFunctionJump=method.id;button.textContent='実関数へ';button.setAttribute('aria-label',variableTypeCode(method.name)+'の実関数へ移動');button.disabled=!unitTestFunctionSource(method);button.onclick=()=>{const source=unitTestFunctionSource(method);if(source)focusSequenceFunction(source);else $('unitTestStatus').textContent='移動先の関数が見つかりません。単体テスト設計を開き直して同期してください。'};return button;
+}
+
 function renderUnitTestOutput(){
  const body=$('unitTestOutput');body.replaceChildren();
  for(const test of unitTestCases()){
   const tr=document.createElement('tr');tr.dataset.unitMethod=test.method.id;tr.dataset.unitType=test.type.key;
   const nameCell=document.createElement('td'),input=document.createElement('input');input.type='text';input.dataset.testName=test.type.key;input.setAttribute('aria-label',variableTypeCode(test.method.name)+'：'+test.type.label+'のテスト名');input.placeholder='テスト名を入力';input.value=test.name;
   input.oninput=()=>{test.method.testNames[test.type.key]=input.value;save();updateUnitTestPreview()};nameCell.append(input);tr.append(nameCell);
-  for(const text of [test.participant.name,test.method.name,test.type.label]){const td=document.createElement('td');td.innerHTML=variableTypeMarkup(text);tr.append(td)}body.append(tr);
+  for(const [index,text] of [test.participant.name,test.method.name,test.type.label].entries()){const td=document.createElement('td');td.innerHTML=variableTypeMarkup(text);if(index===1)td.append(unitTestFunctionJumpButton(test.method));tr.append(td)}body.append(tr);
  }
  updateUnitTestPreview();
 }
@@ -1233,7 +1243,7 @@ function renderUnitTestDesign(){
  for(const participant of active){
   const chip=document.createElement('div');chip.className='unitTarget';const label=document.createElement('span');label.textContent=participant.name+' ('+participant.actorId+') — '+participant.methods.length+'関数';const remove=document.createElement('button');remove.textContent='対象から外す';remove.onclick=()=>{participant.enabled=false;save();renderUnitTestDesign()};const titleLabel=document.createElement('label'),titleInput=document.createElement('input');titleLabel.textContent='タイトル';titleInput.type='text';titleInput.value=participant.title??participant.name;titleInput.dataset.unitTitle=participant.id;titleInput.setAttribute('aria-label',participant.name+'の単体テスト設計タイトル');titleInput.placeholder=participant.name;titleInput.oninput=()=>{participant.title=titleInput.value;save();updateUnitTestPreview()};titleLabel.append(titleInput);chip.append(label,titleLabel,remove);targets.append(chip);
   for(const method of participant.methods){
-   count++;const tr=document.createElement('tr');tr.dataset.unitMethod=method.id;tr.dataset.unitParticipant=participant.id;for(const text of [participant.name,method.name]){const td=document.createElement('td');td.innerHTML=variableTypeMarkup(text);tr.append(td)}
+   count++;const tr=document.createElement('tr');tr.dataset.unitMethod=method.id;tr.dataset.unitParticipant=participant.id;for(const [index,text] of [participant.name,method.name].entries()){const td=document.createElement('td');td.innerHTML=variableTypeMarkup(text);if(index===1)td.append(unitTestFunctionJumpButton(method));tr.append(td)}
    const choices=document.createElement('td');choices.className='unitChoices';
    for(const type of UNIT_TEST_KINDS){const label=document.createElement('label'),checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.dataset.testKind=type.key;checkbox.checked=method.selected.includes(type.key);checkbox.setAttribute('aria-label',variableTypeCode(method.name)+'：'+type.label);
     checkbox.onchange=()=>{method.selected=UNIT_TEST_KINDS.filter(item=>item.key===type.key?checkbox.checked:method.selected.includes(item.key)).map(item=>item.key);save();renderUnitTestOutput()};label.append(checkbox,document.createTextNode(type.label));choices.append(label)}
